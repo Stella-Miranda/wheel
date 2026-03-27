@@ -34,7 +34,7 @@ app.get("/", (req, res) => {
 });
 
 // Serve static files
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(__dirname));
 
 // Provide segment data to clients
 app.get("/segments", (req, res) => {
