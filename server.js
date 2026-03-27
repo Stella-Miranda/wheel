@@ -24,7 +24,7 @@ const SEGMENTS = [
 let isSpinning = false;
 
 // Serve admin page
-app.get("/admin", (req, res) => {
+app.get("/7b0a4404-4809-4a6b-bf54-6e655640632f09-4a6b-bf56b-bf54-6e655640632f09-6e6556404", (req, res) => {
   res.sendFile(path.join(__dirname, "admin.html"));
 });
 
