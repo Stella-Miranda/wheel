@@ -1,0 +1,289 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #0d0d0f;
+  --surface: #16161a;
+  --border: #2a2a32;
+  --accent: #f7c948;
+  --accent2: #ff6b6b;
+  --text: #f0eef8;
+  --muted: #6b6b80;
+  --pointer: #f7c948;
+  --spin-duration: 5000ms;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* Background noise texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.page {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  width: 100%;
+  padding: 24px;
+}
+
+/* ─── Header ─── */
+header {
+  text-align: center;
+}
+
+header h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-shadow: 0 0 40px rgba(247, 201, 72, 0.35);
+  line-height: 1;
+}
+
+header .subtitle {
+  font-size: 0.8rem;
+  color: var(--muted);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.badge {
+  display: inline-block;
+  background: rgba(247, 201, 72, 0.12);
+  border: 1px solid rgba(247, 201, 72, 0.3);
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 100px;
+  margin-top: 10px;
+}
+
+.badge.viewer { background: rgba(100, 100, 200, 0.1); border-color: rgba(150, 150, 220, 0.3); color: #b0aaff; }
+
+/* ─── Wheel Stage ─── */
+.wheel-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Glow ring behind wheel */
+.wheel-stage::before {
+  content: '';
+  position: absolute;
+  width: calc(100% + 40px);
+  height: calc(100% + 40px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(247,201,72,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Pointer triangle — points DOWN into wheel from top */
+.pointer {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 28px solid var(--pointer);
+  z-index: 10;
+  filter: drop-shadow(0 0 8px rgba(247,201,72,0.8));
+}
+
+canvas#wheel {
+  display: block;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 4px var(--border),
+    0 0 0 8px rgba(247,201,72,0.15),
+    0 20px 60px rgba(0,0,0,0.6);
+}
+
+/* Center hub */
+.hub {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #3a3a44, #0d0d0f);
+  border: 3px solid var(--accent);
+  box-shadow: 0 0 16px rgba(247,201,72,0.5), inset 0 2px 4px rgba(255,255,255,0.1);
+  z-index: 10;
+}
+
+/* ─── Controls ─── */
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+#spinBtn {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.12em;
+  color: #0d0d0f;
+  background: var(--accent);
+  border: none;
+  padding: 14px 52px;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 20px rgba(247,201,72,0.35), 0 2px 0 rgba(0,0,0,0.3) inset;
+}
+
+#spinBtn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+#spinBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(247,201,72,0.5), 0 2px 0 rgba(0,0,0,0.3) inset;
+}
+
+#spinBtn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 12px rgba(247,201,72,0.3);
+}
+
+#spinBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ─── Status & Result ─── */
+#status {
+  font-size: 0.78rem;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  min-height: 20px;
+  text-align: center;
+}
+
+#status.live {
+  color: #6fdb8b;
+}
+
+#status.spinning {
+  color: var(--accent);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+#result-banner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.7);
+  background: linear-gradient(135deg, #1a1a22, #222230);
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  padding: 28px 48px;
+  text-align: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 0 80px rgba(247,201,72,0.2), 0 24px 64px rgba(0,0,0,0.5);
+}
+
+#result-banner.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+}
+
+#result-banner .result-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+#result-banner .result-value {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 30px rgba(247,201,72,0.5);
+}
+
+#result-banner .dismiss {
+  margin-top: 16px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+
+/* ─── Connected count ─── */
+#viewer-count {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+#viewer-count span {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ─── Confetti canvas ─── */
+#confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}

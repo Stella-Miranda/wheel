@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wheel of Fortune — Admin</title>
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    /* Admin-only extras */
+    #spinBtn { display: flex; align-items: center; gap: 10px; }
+  </style>
+</head>
+<body>
+  <canvas id="confetti"></canvas>
+
+  <div class="page">
+    <header>
+      <h1>Wheel of Fortune</h1>
+      <p class="subtitle">Admin Panel</p>
+      <span class="badge">⚙ Admin</span>
+    </header>
+
+    <div class="wheel-stage">
+      <div class="pointer"></div>
+      <canvas id="wheel"></canvas>
+      <div class="hub"></div>
+    </div>
+
+    <div class="controls">
+      <button id="spinBtn">
+        🎡 SPIN THE WHEEL
+      </button>
+      <div id="status"></div>
+    </div>
+  </div>
+
+  <div id="result-banner">
+    <div class="result-label">🎯 Result</div>
+    <div class="result-value" id="result-value">—</div>
+    <div class="dismiss">Closes automatically</div>
+  </div>
+
+  <!-- Socket.IO client -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Flag: is admin — enables spin button logic in script.js -->
+  <script>window.IS_ADMIN = true;</script>
+  <script src="/script.js"></script>
+</body>
+</html>

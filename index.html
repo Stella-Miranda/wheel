@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wheel of Fortune — Watch</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <canvas id="confetti"></canvas>
+
+  <div class="page">
+    <header>
+      <h1>Wheel of Fortune</h1>
+      <p class="subtitle">Live Viewing</p>
+      <span class="badge viewer">👁 Viewer</span>
+    </header>
+
+    <div class="wheel-stage">
+      <div class="pointer"></div>
+      <canvas id="wheel"></canvas>
+      <div class="hub"></div>
+    </div>
+
+    <div class="controls">
+      <!-- No spin button for viewers -->
+      <div id="status"></div>
+    </div>
+  </div>
+
+  <div id="result-banner">
+    <div class="result-label">🎯 Result</div>
+    <div class="result-value" id="result-value">—</div>
+    <div class="dismiss">Closes automatically</div>
+  </div>
+
+  <!-- Socket.IO client -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Flag: not admin -->
+  <script>window.IS_ADMIN = false;</script>
+  <script src="/script.js"></script>
+</body>
+</html>
