@@ -5,6 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wheel of Fortune — Watch</title>
   <link rel="stylesheet" href="/style.css" />
+  <style>
+    .qr-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .qr-section p {
+      font-size: 0.75rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .qr-section img {
+      width: 160px;
+      height: 160px;
+      border-radius: 12px;
+      border: 2px solid var(--border);
+      object-fit: contain;
+      background: #fff;
+      padding: 8px;
+    }
+  </style>
 </head>
 <body>
   <canvas id="confetti"></canvas>
@@ -23,8 +53,13 @@
     </div>
 
     <div class="controls">
-      <!-- No spin button for viewers -->
       <div id="status"></div>
+    </div>
+
+    <!-- QR Code — place qrcode.jpg in the root of your project -->
+    <div class="qr-section">
+      <p>Scan to join</p>
+      <img src="/qrcode.jpg" alt="QR Code" />
     </div>
   </div>
 
@@ -34,9 +69,7 @@
     <div class="dismiss">Closes automatically</div>
   </div>
 
-  <!-- Socket.IO client -->
   <script src="/socket.io/socket.io.js"></script>
-  <!-- Flag: not admin -->
   <script>window.IS_ADMIN = false;</script>
   <script src="/script.js"></script>
 </body>
