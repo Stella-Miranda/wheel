@@ -1,56 +1,49 @@
-// script.js — shared wheel logic for both viewer and admin
-// IS_ADMIN is set inline in each HTML file before this script loads
+// script.js — shared wheel logic for viewer + admin
+// window.IS_ADMIN is set inline in each HTML file
 
 (function () {
-  /* ── Socket connection ── */
   const socket = io();
 
-  /* ── State ── */
   let segments = [];
-  let currentRotation = 0; // tracks cumulative rotation for continuity
+  let currentRotation = 0; // cumulative degrees — kept in sync across spins
   let spinning = false;
 
-  /* ── DOM refs ── */
-  const canvas = document.getElementById("wheel");
-  const ctx = canvas.getContext("2d");
-  const statusEl = document.getElementById("status");
+  const canvas      = document.getElementById("wheel");
+  const ctx         = canvas.getContext("2d");
+  const statusEl    = document.getElementById("status");
   const resultBanner = document.getElementById("result-banner");
-  const resultValue = document.getElementById("result-value");
+  const resultValue  = document.getElementById("result-value");
   const confettiCanvas = document.getElementById("confetti");
-  const confettiCtx = confettiCanvas.getContext("2d");
-  const spinBtn = document.getElementById("spinBtn"); // null for viewers
+  const confettiCtx    = confettiCanvas.getContext("2d");
+  const spinBtn = document.getElementById("spinBtn");
 
-  /* ── Canvas sizing ── */
+  // Canvas sizing
   const SIZE = Math.min(window.innerWidth * 0.82, 420);
-  canvas.width = SIZE;
+  canvas.width  = SIZE;
   canvas.height = SIZE;
   const R = SIZE / 2;
 
-  confettiCanvas.width = window.innerWidth;
+  confettiCanvas.width  = window.innerWidth;
   confettiCanvas.height = window.innerHeight;
 
-  /* ─────────────────────────────────────────────
-     WHEEL DRAWING
-  ───────────────────────────────────────────── */
-  function drawWheel(rotationRad) {
+  // ── Draw wheel ────────────────────────────────────────────────────
+  function drawWheel(rotDeg) {
     ctx.clearRect(0, 0, SIZE, SIZE);
     if (!segments.length) return;
 
-    const segAngle = (2 * Math.PI) / segments.length;
+    const rotRad    = (rotDeg * Math.PI) / 180;
+    const segAngle  = (2 * Math.PI) / segments.length;
 
     segments.forEach((seg, i) => {
-      const startAngle = rotationRad + i * segAngle;
-      const endAngle = startAngle + segAngle;
+      const start = rotRad + i * segAngle;
+      const end   = start + segAngle;
 
-      // Segment fill
       ctx.beginPath();
       ctx.moveTo(R, R);
-      ctx.arc(R, R, R - 2, startAngle, endAngle);
+      ctx.arc(R, R, R - 2, start, end);
       ctx.closePath();
       ctx.fillStyle = seg.color;
       ctx.fill();
-
-      // Segment stroke
       ctx.strokeStyle = "rgba(0,0,0,0.25)";
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -58,15 +51,14 @@
       // Label
       ctx.save();
       ctx.translate(R, R);
-      ctx.rotate(startAngle + segAngle / 2);
+      ctx.rotate(start + segAngle / 2);
       ctx.textAlign = "right";
       ctx.fillStyle = "#ffffff";
       ctx.shadowColor = "rgba(0,0,0,0.7)";
-      ctx.shadowBlur = 4;
-
-      const fontSize = Math.max(11, Math.min(15, R / (segments.length * 0.7)));
-      ctx.font = `600 ${fontSize}px 'DM Sans', sans-serif`;
-      ctx.fillText(seg.label, R - 16, fontSize / 3);
+      ctx.shadowBlur  = 4;
+      const fs = Math.max(11, Math.min(15, R / (segments.length * 0.7)));
+      ctx.font = `600 ${fs}px 'DM Sans', sans-serif`;
+      ctx.fillText(seg.label, R - 16, fs / 3);
       ctx.restore();
     });
 
@@ -78,68 +70,46 @@
     ctx.stroke();
   }
 
-  /* ─────────────────────────────────────────────
-     SPIN ANIMATION
-     targetAngle: total degrees to rotate (absolute)
-     duration: ms
-  ───────────────────────────────────────────── */
+  // ── Animate spin ──────────────────────────────────────────────────
+  // targetAngleDeg: DELTA degrees to add to currentRotation
   function animateSpin(targetAngleDeg, duration) {
     spinning = true;
     if (spinBtn) spinBtn.disabled = true;
-
     setStatus("spinning", "🎡 Spinning...");
 
-    const startRotation = currentRotation;
-    const endRotation = startRotation + targetAngleDeg;
+    const startRot = currentRotation;
+    const endRot   = startRot + targetAngleDeg;
     const startTime = performance.now();
 
-    // Ease-out cubic
-    function easeOut(t) {
-      return 1 - Math.pow(1 - t, 4);
-    }
+    function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
 
     function frame(now) {
-      const elapsed = now - startTime;
+      const elapsed  = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = easeOut(progress);
-
-      const rotation = startRotation + (endRotation - startRotation) * eased;
-      currentRotation = rotation;
-
-      drawWheel((rotation * Math.PI) / 180);
-
-      if (progress < 1) {
-        requestAnimationFrame(frame);
-      }
+      const rot = startRot + (endRot - startRot) * easeOut(progress);
+      currentRotation = rot;
+      drawWheel(rot);
+      if (progress < 1) requestAnimationFrame(frame);
     }
 
     requestAnimationFrame(frame);
   }
 
-  /* ─────────────────────────────────────────────
-     STATUS HELPER
-  ───────────────────────────────────────────── */
+  // ── Status ────────────────────────────────────────────────────────
   function setStatus(cls, msg) {
-    statusEl.className = cls;
+    statusEl.className   = cls;
     statusEl.textContent = msg;
   }
 
-  /* ─────────────────────────────────────────────
-     RESULT BANNER
-  ───────────────────────────────────────────── */
+  // ── Result banner ─────────────────────────────────────────────────
   function showResult(label) {
     resultValue.textContent = label;
     resultBanner.classList.add("show");
     launchConfetti();
-
-    setTimeout(() => {
-      resultBanner.classList.remove("show");
-    }, 4000);
+    setTimeout(() => resultBanner.classList.remove("show"), 4000);
   }
 
-  /* ─────────────────────────────────────────────
-     MINI CONFETTI
-  ───────────────────────────────────────────── */
+  // ── Confetti ──────────────────────────────────────────────────────
   let confettiParticles = [];
 
   function launchConfetti() {
@@ -150,7 +120,7 @@
         y: -10,
         vx: (Math.random() - 0.5) * 4,
         vy: Math.random() * 4 + 2,
-        color: ["#f7c948", "#ff6b6b", "#4ecdc4", "#c3a6ff", "#ff6fa8"][Math.floor(Math.random() * 5)],
+        color: ["#f7c948","#ff6b6b","#4ecdc4","#c3a6ff","#ff6fa8"][Math.floor(Math.random()*5)],
         size: Math.random() * 8 + 4,
         rotation: Math.random() * 360,
         rotSpeed: (Math.random() - 0.5) * 8,
@@ -162,45 +132,45 @@
 
   function tickConfetti() {
     confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
-    confettiParticles = confettiParticles.filter((p) => p.life > 0.01);
-
-    confettiParticles.forEach((p) => {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.1;
-      p.rotation += p.rotSpeed;
-      p.life -= 0.012;
-
+    confettiParticles = confettiParticles.filter(p => p.life > 0.01);
+    confettiParticles.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.1;
+      p.rotation += p.rotSpeed; p.life -= 0.012;
       confettiCtx.save();
       confettiCtx.globalAlpha = p.life;
       confettiCtx.translate(p.x, p.y);
       confettiCtx.rotate((p.rotation * Math.PI) / 180);
       confettiCtx.fillStyle = p.color;
-      confettiCtx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+      confettiCtx.fillRect(-p.size/2, -p.size/4, p.size, p.size/2);
       confettiCtx.restore();
     });
-
-    if (confettiParticles.length > 0) {
-      requestAnimationFrame(tickConfetti);
-    }
+    if (confettiParticles.length > 0) requestAnimationFrame(tickConfetti);
   }
 
-  /* ─────────────────────────────────────────────
-     SOCKET EVENTS
-  ───────────────────────────────────────────── */
+  // ── Socket events ─────────────────────────────────────────────────
   socket.on("init", (data) => {
     segments = data.segments;
-    drawWheel((currentRotation * Math.PI) / 180);
+    drawWheel(currentRotation);
     setStatus("live", "● Connected — waiting for spin");
+    if (window.IS_ADMIN) renderAdminPanel();
+  });
+
+  socket.on("segmentsUpdated", (data) => {
+    segments = data.segments;
+    // Reset rotation so pointer math stays clean after segment count changes
+    currentRotation = 0;
+    drawWheel(0);
+    if (window.IS_ADMIN) renderAdminPanel();
   });
 
   socket.on("spinResult", (data) => {
-    // All clients receive same targetAngle and duration
     animateSpin(data.targetAngle, data.duration);
   });
 
   socket.on("spinComplete", (data) => {
     spinning = false;
+    // Normalise currentRotation to keep numbers small
+    currentRotation = currentRotation % 360;
     if (spinBtn) spinBtn.disabled = false;
     setStatus("live", "● Ready");
     showResult(data.label);
@@ -221,29 +191,106 @@
     if (spinBtn && !spinning) spinBtn.disabled = false;
   });
 
-  /* ─────────────────────────────────────────────
-     ADMIN SPIN BUTTON
-     Token is checked server-side; emitting from
-     console won't work without the correct token.
-  ───────────────────────────────────────────── */
+  // ── Spin button ───────────────────────────────────────────────────
   if (spinBtn) {
     spinBtn.addEventListener("click", () => {
       if (spinning) return;
-      // Send admin token — server validates before accepting
       socket.emit("requestSpin", { adminToken: "wheel-admin-secret" });
     });
   }
 
-  /* Prevent open console spin attempts on viewer page */
+  // ── Block viewers from spoofing spins ─────────────────────────────
   if (!window.IS_ADMIN) {
-    // Overwrite socket.emit so viewers can't send requestSpin
     const _emit = socket.emit.bind(socket);
     socket.emit = function (event, ...args) {
-      if (event === "requestSpin") {
-        console.warn("Nice try 😄 — spin is server-controlled.");
+      if (event === "requestSpin" || event === "updateSegments") {
+        console.warn("Nice try 😄 — controls are server-side only.");
         return;
       }
       return _emit(event, ...args);
     };
   }
+
+  // ── Admin panel ───────────────────────────────────────────────────
+  // Renders a live editable list of segments on the right side
+  function renderAdminPanel() {
+    const panel = document.getElementById("segment-panel");
+    if (!panel) return;
+
+    panel.innerHTML = "";
+
+    segments.forEach((seg, i) => {
+      const row = document.createElement("div");
+      row.className = "seg-row";
+
+      // Color swatch
+      const swatch = document.createElement("input");
+      swatch.type  = "color";
+      swatch.value = seg.color;
+      swatch.className = "seg-color";
+      swatch.title = "Change color";
+      swatch.addEventListener("input", () => {
+        segments[i].color = swatch.value;
+        drawWheel(currentRotation);
+      });
+
+      // Label input
+      const labelInput = document.createElement("input");
+      labelInput.type      = "text";
+      labelInput.value     = seg.label;
+      labelInput.maxLength = 30;
+      labelInput.className = "seg-label";
+      labelInput.placeholder = "Segment label";
+      labelInput.addEventListener("input", () => {
+        segments[i].label = labelInput.value;
+        drawWheel(currentRotation);
+      });
+
+      // Delete button
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "✕";
+      delBtn.className   = "seg-del";
+      delBtn.title       = "Remove segment";
+      delBtn.addEventListener("click", () => {
+        if (segments.length <= 2) {
+          alert("Need at least 2 segments.");
+          return;
+        }
+        segments.splice(i, 1);
+        pushSegments();
+      });
+
+      row.appendChild(swatch);
+      row.appendChild(labelInput);
+      row.appendChild(delBtn);
+      panel.appendChild(row);
+    });
+
+    // Add segment button
+    const addBtn = document.createElement("button");
+    addBtn.textContent = "+ Add segment";
+    addBtn.className   = "seg-add";
+    addBtn.addEventListener("click", async () => {
+      const res   = await fetch("/next-color");
+      const { color } = await res.json();
+      segments.push({ label: "New", color });
+      pushSegments();
+    });
+    panel.appendChild(addBtn);
+
+    // Apply button — broadcasts to all clients
+    const applyBtn = document.createElement("button");
+    applyBtn.textContent = "✔ Apply to all viewers";
+    applyBtn.className   = "seg-apply";
+    applyBtn.addEventListener("click", pushSegments);
+    panel.appendChild(applyBtn);
+  }
+
+  function pushSegments() {
+    socket.emit("updateSegments", {
+      adminToken: "wheel-admin-secret",
+      segments,
+    });
+  }
+
 })();
