@@ -6,6 +6,28 @@
   <title>Wheel of Fortune — Watch</title>
   <link rel="stylesheet" href="/style.css" />
   <style>
+    /* Chrome, Edge, Safari */
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #111; /* dark background */
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #444; /* scrollbar color */
+      border-radius: 6px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #666;
+    }
+    
+    /* Firefox */
+    html {
+      scrollbar-color: #444 #111;
+    }
     .qr-section {
       display: flex;
       flex-direction: column;
