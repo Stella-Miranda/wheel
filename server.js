@@ -17,7 +17,6 @@ const COLORS = [
   "#F7B731","#26de81","#fd9644","#45aaf2",
 ];
 
-// Live segments — mutated by admin at runtime
 let segments = [
   { label: "🎉 JACKPOT", color: "#FF6B6B" },
   { label: "💎 500 pts", color: "#4ECDC4" },
@@ -29,7 +28,11 @@ let segments = [
   { label: "🍀 LUCKY",   color: "#69D2E7" },
 ];
 
-let isSpinning = false;
+let isSpinning   = false;
+// The single source of truth for where the wheel face sits (degrees).
+// Every client is snapped to this value after each spin completes,
+// so all devices are always perfectly in sync.
+let sharedRotation = 0;
 
 // ── Routes ───────────────────────────────────────────────────────────
 app.get("/7b0a4404-4809-4a6b-bf54-6e655640632f09-4a6b-bf56b-bf54-6e655640632f09-6e6556404", (req, res) => {
@@ -40,9 +43,8 @@ app.get("/", (req, res) => {
 });
 app.use(express.static(__dirname));
 
-// Spare color helper for new segments
 app.get("/next-color", (req, res) => {
-  const used = segments.map(s => s.color);
+  const used  = segments.map(s => s.color);
   const spare = COLORS.find(c => !used.includes(c)) || COLORS[segments.length % COLORS.length];
   res.json({ color: spare });
 });
@@ -50,9 +52,11 @@ app.get("/next-color", (req, res) => {
 // ── Socket.IO ─────────────────────────────────────────────────────────
 io.on("connection", (socket) => {
   console.log(`Client connected: ${socket.id}`);
-  socket.emit("init", { segments });
 
-  // Admin: update segments list
+  // Send current state — new clients start at the same rotation as everyone else
+  socket.emit("init", { segments, sharedRotation });
+
+  // ── Admin: update segments ──
   socket.on("updateSegments", (data) => {
     if (data?.adminToken !== "wheel-admin-secret") return;
     if (!Array.isArray(data.segments) || data.segments.length < 2) return;
@@ -62,11 +66,13 @@ io.on("connection", (socket) => {
       color: String(s.color || COLORS[i % COLORS.length]),
     }));
 
-    io.emit("segmentsUpdated", { segments });
+    // Reset rotation when segments change so pointer math is clean
+    sharedRotation = 0;
+    io.emit("segmentsUpdated", { segments, sharedRotation });
     console.log(`Segments updated → ${segments.length} segments`);
   });
 
-  // Admin: spin
+  // ── Admin: spin ──
   socket.on("requestSpin", (data) => {
     if (data?.adminToken !== "wheel-admin-secret") {
       console.log(`Unauthorized spin attempt from ${socket.id}`);
@@ -83,47 +89,55 @@ io.on("connection", (socket) => {
 
     isSpinning = true;
 
-    const winningIndex = Math.floor(Math.random() * segments.length);
-    const segmentAngle = 360 / segments.length;
+    const winningIndex  = Math.floor(Math.random() * segments.length);
+    const segmentAngle  = 360 / segments.length;
 
-    // ── Pointer fix ──────────────────────────────────────────────────
-    // Canvas draws segment[i] occupying angles:
-    //   from: rotationRad + i * segAngle
-    //   to:   rotationRad + (i+1) * segAngle
-    // (all in radians, clockwise from the right / 3 o'clock position)
+    // ── Cross-device sync fix ────────────────────────────────────────
+    // The wheel is drawn starting from `sharedRotation` (degrees).
+    // Segment[i] occupies the arc from:
+    //   sharedRotation + i * segmentAngle
+    //   to
+    //   sharedRotation + (i+1) * segmentAngle
+    // (clockwise, canvas coords — 0° = 3 o'clock)
     //
-    // The pointer is at the TOP of the canvas = -π/2 rad from centre
-    // = 270° in clockwise-from-right degrees.
+    // The pointer is at the TOP = 270° (canvas clockwise from 3 o'clock).
     //
-    // After animation, finalRotationDeg = currentRotation + targetAngle.
-    // We want the CENTER of segment[winningIndex] to sit at 270°:
-    //   finalRotation + winningIndex * segAngle + segAngle/2  ≡  270  (mod 360)
+    // We want segment[winningIndex]'s CENTER to land at 270° after the spin.
+    // Center of segment[i] in the final wheel = finalRotation + i*segAngle + segAngle/2
+    // We solve:
+    //   finalRotation + segCenter ≡ 270  (mod 360)
+    //   finalRotation = (270 - segCenter + 360*k) for large enough k
     //
-    // Because every client resets currentRotation to 0 after each spin
-    // (we accumulate targetAngle into currentRotation), we can treat
-    // currentRotation = 0 here and send targetAngle as an absolute delta:
+    // We need finalRotation > sharedRotation (wheel spins forward) by at least 5 full turns.
+    // So:
+    //   extra      = ((270 - segCenter) % 360 + 360) % 360   ← 0..359
+    //   finalRotation = sharedRotation + 360*5 + extra
     //
-    //   targetAngle = (270 - winningIndex*segAngle - segAngle/2) mod 360
-    //               + 360*N   (add full spins so wheel visibly spins)
-    //
-    const segCenter = winningIndex * segmentAngle + segmentAngle / 2;
-    const extra = ((270 - segCenter) % 360 + 360) % 360;
-    const targetAngle = 360 * 5 + extra;
+    // After animation, every client snaps currentRotation = nextSharedRotation,
+    // where nextSharedRotation = finalRotation % 360 (kept small for next spin).
+
+    const segCenter       = winningIndex * segmentAngle + segmentAngle / 2;
+    const extra           = ((270 - segCenter) % 360 + 360) % 360;
+    const finalRotation   = sharedRotation + 360 * 5 + extra;
+    const nextShared      = finalRotation % 360;
 
     console.log(
       `Winner: [${winningIndex}] "${segments[winningIndex].label}" | ` +
-      `segCenter=${segCenter.toFixed(1)}° extra=${extra.toFixed(1)}°`
+      `segCenter=${segCenter.toFixed(1)}° extra=${extra.toFixed(1)}° ` +
+      `final=${finalRotation.toFixed(1)}° nextShared=${nextShared.toFixed(1)}°`
     );
 
+    // Broadcast to ALL clients — same numbers, same animation, same result
     io.emit("spinResult", {
-      winningIndex,
-      targetAngle,
+      finalRotation,   // absolute target every client animates TO
+      sharedRotation: nextShared, // value every client stores AFTER animation
       duration: 5000,
       label: segments[winningIndex].label,
     });
 
     setTimeout(() => {
-      isSpinning = false;
+      isSpinning   = false;
+      sharedRotation = nextShared; // server now tracks the new resting position
       io.emit("spinComplete", { label: segments[winningIndex].label });
     }, 5500);
   });
