@@ -6,8 +6,136 @@
   <title>Wheel of Fortune — Admin</title>
   <link rel="stylesheet" href="/style.css" />
   <style>
-    /* Admin-only extras */
-    #spinBtn { display: flex; align-items: center; gap: 10px; }
+    /* ── Admin layout: wheel left, panel right ── */
+    .admin-layout {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 32px;
+      width: 100%;
+      max-width: 900px;
+      padding: 24px 16px;
+    }
+
+    .wheel-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      flex-shrink: 0;
+    }
+
+    /* ── Segment editor panel ── */
+    .seg-panel-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 16px;
+      width: 260px;
+      flex-shrink: 0;
+      margin-top: 8px;
+    }
+
+    .seg-panel-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1rem;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+
+    #segment-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .seg-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .seg-color {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 6px;
+      padding: 2px;
+      cursor: pointer;
+      background: none;
+      flex-shrink: 0;
+    }
+
+    .seg-label {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.82rem;
+      padding: 6px 10px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .seg-label:focus {
+      border-color: var(--accent);
+    }
+
+    .seg-del {
+      background: rgba(255, 100, 100, 0.12);
+      border: 1px solid rgba(255, 100, 100, 0.25);
+      color: #ff6b6b;
+      border-radius: 6px;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+
+    .seg-del:hover { background: rgba(255,100,100,0.25); }
+
+    .seg-add {
+      margin-top: 6px;
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px dashed var(--border);
+      color: var(--muted);
+      border-radius: 6px;
+      padding: 8px;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .seg-add:hover { border-color: var(--accent); color: var(--accent); }
+
+    .seg-apply {
+      margin-top: 10px;
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: #0d0d0f;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      padding: 10px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .seg-apply:hover { opacity: 0.85; }
+
+    @media (max-width: 680px) {
+      .admin-layout { flex-direction: column; align-items: center; }
+      .seg-panel-wrap { width: 100%; max-width: 420px; }
+    }
   </style>
 </head>
 <body>
@@ -20,17 +148,25 @@
       <span class="badge">⚙ Admin</span>
     </header>
 
-    <div class="wheel-stage">
-      <div class="pointer"></div>
-      <canvas id="wheel"></canvas>
-      <div class="hub"></div>
-    </div>
+    <div class="admin-layout">
+      <!-- Left: wheel + spin button -->
+      <div class="wheel-col">
+        <div class="wheel-stage">
+          <div class="pointer"></div>
+          <canvas id="wheel"></canvas>
+          <div class="hub"></div>
+        </div>
+        <div class="controls">
+          <button id="spinBtn">🎡 SPIN THE WHEEL</button>
+          <div id="status"></div>
+        </div>
+      </div>
 
-    <div class="controls">
-      <button id="spinBtn">
-        🎡 SPIN THE WHEEL
-      </button>
-      <div id="status"></div>
+      <!-- Right: segment editor -->
+      <div class="seg-panel-wrap">
+        <div class="seg-panel-title">✏ Edit Segments</div>
+        <div id="segment-panel"></div>
+      </div>
     </div>
   </div>
 
@@ -40,9 +176,7 @@
     <div class="dismiss">Closes automatically</div>
   </div>
 
-  <!-- Socket.IO client -->
   <script src="/socket.io/socket.io.js"></script>
-  <!-- Flag: is admin — enables spin button logic in script.js -->
   <script>window.IS_ADMIN = true;</script>
   <script src="/script.js"></script>
 </body>
