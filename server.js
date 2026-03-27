@@ -25,12 +25,12 @@ let isSpinning = false;
 
 // Serve admin page
 app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin.html"));
+  res.sendFile(path.join(__dirname, "admin.html"));
 });
 
 // Serve viewer page at root
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 // Serve static files
